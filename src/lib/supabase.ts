@@ -1,24 +1,26 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabasePublicKey =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 export const isSupabaseConfigured = Boolean(
   supabaseUrl &&
-    supabaseAnonKey &&
+    supabasePublicKey &&
     supabaseUrl.startsWith('http') &&
-    supabaseAnonKey.length > 20,
+    supabasePublicKey.length > 20,
 )
 
 let supabaseClient: SupabaseClient | null = null
 
 export function getSupabaseClient(): SupabaseClient | null {
-  if (!isSupabaseConfigured || !supabaseUrl || !supabaseAnonKey) {
+  if (!isSupabaseConfigured || !supabaseUrl || !supabasePublicKey) {
     return null
   }
 
   if (!supabaseClient) {
-    supabaseClient = createClient(supabaseUrl, supabaseAnonKey)
+    supabaseClient = createClient(supabaseUrl, supabasePublicKey)
   }
 
   return supabaseClient
