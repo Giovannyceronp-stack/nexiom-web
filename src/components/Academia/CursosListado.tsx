@@ -1,7 +1,7 @@
 'use client'
 
-import Link from 'next/link'
 import { getSupabaseClient } from '@/lib/supabase'
+import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 
 type Curso = {
@@ -45,9 +45,11 @@ const cursosFallback: Curso[] = [
 ]
 
 export function CursosListado() {
+  const router = useRouter()
   const supabase = useMemo(() => getSupabaseClient(), [])
   const [cursos, setCursos] = useState<Curso[]>(cursosFallback)
   const [isLoading, setIsLoading] = useState(true)
+  const [isEnrolling, setIsEnrolling] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
 
   useEffect(() => {
@@ -72,7 +74,7 @@ export function CursosListado() {
 
       if (data && data.length > 0) {
         setCursos(data)
-        setStatusMessage('Cursos cargados desde Supabase.')
+        setStatusMessage('Cursos cargados desde Supabase. Para acceder debes registrar inscripción académica.')
       } else {
         setStatusMessage('No hay cursos publicados todavía. Mostrando cursos base locales.')
       }
@@ -82,6 +84,48 @@ export function CursosListado() {
 
     cargarCursos()
   }, [supabase])
+
+  const registrarInscripcion = async (curso: Curso) => {
+    if (!supabase) {
+      setStatusMessage('Supabase no está configurado. No se puede registrar la inscripción.')
+      return
+    }
+
+    setIsEnrolling(curso.id)
+    setStatusMessage(null)
+
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession()
+
+    if (sessionError || !session) {
+      setIsEnrolling(null)
+      router.push('/auth')
+      return
+    }
+
+    const { error } = await supabase
+      .from('enrollments')
+      .upsert(
+        {
+          user_id: session.user.id,
+          course_id: curso.id,
+          status: 'in_progress',
+          progress_percent: 0,
+        },
+        { onConflict: 'user_id,course_id' },
+      )
+
+    setIsEnrolling(null)
+
+    if (error) {
+      setStatusMessage(`No se pudo registrar la inscripción: ${error.message}`)
+      return
+    }
+
+    router.push(`/academia/curso/${curso.slug}`)
+  }
 
   return (
     <section className="py-16 px-4 bg-nexiom-dark min-h-screen">
@@ -106,14 +150,16 @@ export function CursosListado() {
                 <div className="space-y-2 mb-4 text-sm">
                   <p><span className="text-nexiom-bronze">Duración:</span> {curso.duration_hours} horas</p>
                   <p><span className="text-nexiom-bronze">Categoría:</span> {curso.category}</p>
-                  <p><span className="text-nexiom-bronze">Modalidad:</span> Academia Virtual Nexiom</p>
+                  <p><span className="text-nexiom-bronze">Gestión:</span> inscripción previa, avance y constancia</p>
                 </div>
-                <Link
-                  href={`/academia/curso/${curso.slug}`}
-                  className="block w-full bg-nexiom-bronze-light text-white text-center py-2 rounded font-bold hover:bg-nexiom-bronze transition"
+                <button
+                  type="button"
+                  onClick={() => registrarInscripcion(curso)}
+                  disabled={isEnrolling === curso.id}
+                  className="block w-full bg-nexiom-bronze-light text-white text-center py-2 rounded font-bold hover:bg-nexiom-bronze transition disabled:opacity-60"
                 >
-                  Acceder al Curso
-                </Link>
+                  {isEnrolling === curso.id ? 'Registrando inscripción...' : 'Inscribirme para acceder'}
+                </button>
               </div>
             ))}
           </div>
