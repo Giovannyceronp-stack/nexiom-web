@@ -11,9 +11,12 @@ permissions:
   pages: write
   id-token: write
 
+env:
+  SITE_DIR: _site
+
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -27,52 +30,52 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
       - name: Prepare static site
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p _site
 
-          if [ ! -f index.html ]; then
+          rm -rf "$SITE_DIR"
+          mkdir -p "$SITE_DIR"
+
+          if [ ! -f "index.html" ]; then
             echo "ERROR: index.html not found at repository root."
             exit 1
           fi
 
-          cp index.html _site/index.html
+          cp "index.html" "$SITE_DIR/index.html"
 
-          # Optional public assets if they exist later.
-          [ -d assets ] && cp -R assets _site/assets || true
-          [ -d css ] && cp -R css _site/css || true
-          [ -d js ] && cp -R js _site/js || true
-          [ -f privacidad.html ] && cp privacidad.html _site/privacidad.html || true
-          [ -f robots.txt ] && cp robots.txt _site/robots.txt || true
-          [ -f sitemap.xml ] && cp sitemap.xml _site/sitemap.xml || true
+          if [ -d "assets" ]; then cp -R "assets" "$SITE_DIR/assets"; fi
+          if [ -d "css" ]; then cp -R "css" "$SITE_DIR/css"; fi
+          if [ -d "js" ]; then cp -R "js" "$SITE_DIR/js"; fi
+          if [ -f "privacidad.html" ]; then cp "privacidad.html" "$SITE_DIR/privacidad.html"; fi
+          if [ -f "robots.txt" ]; then cp "robots.txt" "$SITE_DIR/robots.txt"; fi
+          if [ -f "sitemap.xml" ]; then cp "sitemap.xml" "$SITE_DIR/sitemap.xml"; fi
 
-          if [ ! -f _site/robots.txt ]; then
-            cat > _site/robots.txt <<'EOF'
-          User-agent: *
-          Allow: /
-          EOF
+          if [ ! -f "$SITE_DIR/robots.txt" ]; then
+            printf '%s\n' 'User-agent: *' 'Allow: /' > "$SITE_DIR/robots.txt"
           fi
 
-          cat > _site/404.html <<'EOF'
-          <!doctype html>
-          <html lang="es">
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <title>Nexiom | Página no encontrada</title>
-          </head>
-          <body style="font-family:Arial,sans-serif;padding:3rem;line-height:1.5;background:#061A32;color:white;">
-            <h1>Nexiom</h1>
-            <p>La página solicitada no existe o fue movida.</p>
-            <p><a style="color:#C99A4A;font-weight:bold;" href="./">Volver al inicio</a></p>
-          </body>
-          </html>
-          EOF
+          printf '%s\n' \
+            '<!doctype html>' \
+            '<html lang="es">' \
+            '<head>' \
+            '  <meta charset="utf-8">' \
+            '  <meta name="viewport" content="width=device-width, initial-scale=1">' \
+            '  <title>Nexiom | Página no encontrada</title>' \
+            '</head>' \
+            '<body style="font-family:Arial,sans-serif;padding:3rem;line-height:1.5;background:#061A32;color:white;">' \
+            '  <h1>Nexiom</h1>' \
+            '  <p>La página solicitada no existe o fue movida.</p>' \
+            '  <p><a style="color:#C99A4A;font-weight:bold;" href="./">Volver al inicio</a></p>' \
+            '</body>' \
+            '</html>' > "$SITE_DIR/404.html"
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
+          echo "Prepared site files:"
+          find "$SITE_DIR" -maxdepth 3 -type f | sort
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
