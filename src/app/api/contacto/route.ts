@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase'
 
 type ContactoPayload = {
   nombre?: string
@@ -20,24 +21,47 @@ export async function POST(request: Request) {
       )
     }
 
-    const registro = {
-      id: `NXM-${Date.now()}`,
-      nombre: body.nombre.trim(),
-      empresa: body.empresa.trim(),
-      correo: body.correo.trim().toLowerCase(),
-      telefono: body.telefono?.trim() || null,
-      servicio: body.servicio || 'Diagnóstico integral Nexiom',
-      descripcion: body.descripcion.trim(),
-      estado: 'recibido',
-      createdAt: new Date().toISOString(),
+    if (!isSupabaseConfigured) {
+      return NextResponse.json(
+        { ok: false, message: 'Supabase no está configurado. La solicitud no fue registrada.' },
+        { status: 503 },
+      )
     }
 
-    console.info('Nueva solicitud Nexiom:', registro)
+    const supabase = getSupabaseClient()
+
+    if (!supabase) {
+      return NextResponse.json(
+        { ok: false, message: 'No fue posible inicializar Supabase.' },
+        { status: 503 },
+      )
+    }
+
+    const folio = `NXM-${Date.now()}`
+
+    const { error } = await supabase.from('contact_requests').insert({
+      folio,
+      nombre: body.nombre.trim(),
+      empresa: body.empresa.trim(),
+      email: body.correo.trim().toLowerCase(),
+      telefono: body.telefono?.trim() || null,
+      servicio: body.servicio || 'Diagnóstico integral Nexiom',
+      mensaje: body.descripcion.trim(),
+      status: 'new',
+    })
+
+    if (error) {
+      console.error('Error registrando solicitud Nexiom:', error)
+      return NextResponse.json(
+        { ok: false, message: 'No se pudo registrar la solicitud en Supabase.' },
+        { status: 500 },
+      )
+    }
 
     return NextResponse.json({
       ok: true,
       message: 'Solicitud registrada correctamente.',
-      folio: registro.id,
+      folio,
     })
   } catch (error) {
     console.error('Error en contacto Nexiom:', error)
