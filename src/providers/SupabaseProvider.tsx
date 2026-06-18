@@ -1,21 +1,20 @@
 'use client'
 
 import { ReactNode, useEffect, useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
+import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase'
 
 export function SupabaseProvider({ children }: { children: ReactNode }) {
   const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
+    if (isSupabaseConfigured) {
+      getSupabaseClient()
+    }
+
     setIsReady(true)
   }, [])
 
-  if (!isReady) return <>{children}</>
+  if (!isReady) return null
 
   return <>{children}</>
 }
