@@ -1,60 +1,123 @@
 'use client'
 
 import Link from 'next/link'
+import { getSupabaseClient } from '@/lib/supabase'
+import { useEffect, useMemo, useState } from 'react'
+
+type Curso = {
+  id: string
+  slug: string
+  title: string
+  description: string
+  duration_hours: number
+  category: string
+  published: boolean
+}
+
+const cursosFallback: Curso[] = [
+  {
+    id: 'capital-humano-estrategico',
+    slug: 'capital-humano-estrategico',
+    title: 'Capital Humano Estratégico',
+    description: 'Gestión integral de talento y desarrollo organizacional.',
+    duration_hours: 40,
+    category: 'Capital Humano',
+    published: true,
+  },
+  {
+    id: 'automatizacion-procesos-rh',
+    slug: 'automatizacion-procesos-rh',
+    title: 'Automatización de Procesos RH',
+    description: 'Implementación de IA y automatización en recursos humanos.',
+    duration_hours: 30,
+    category: 'IA y Automatización',
+    published: true,
+  },
+  {
+    id: 'nom-035-stps-2018',
+    slug: 'nom-035-stps-2018',
+    title: 'Cumplimiento Normativo NOM-035-STPS-2018',
+    description: 'Prevención de riesgos psicosociales, evidencia documental y cumplimiento normativo.',
+    duration_hours: 20,
+    category: 'Cumplimiento Normativo',
+    published: true,
+  },
+]
 
 export function CursosListado() {
-  const cursos = [
-    {
-      id: 1,
-      titulo: 'Capital Humano Estratégico',
-      descripcion: 'Gestión integral de talento y desarrollo organizacional',
-      horas: 40,
-      nivel: 'Avanzado',
-      instructor: 'Giovanny Cerón Pérez',
-    },
-    {
-      id: 2,
-      titulo: 'Automatización de Procesos RH',
-      descripcion: 'Implementación de IA y automatización en recursos humanos',
-      horas: 30,
-      nivel: 'Intermedio',
-      instructor: 'NEXI IA',
-    },
-    {
-      id: 3,
-      titulo: 'Cumplimiento Normativo NOM-035',
-      descripcion: 'Asesoría en factores de riesgo psicosocial y seguridad',
-      horas: 20,
-      nivel: 'Básico',
-      instructor: 'Nexiom Academy',
-    },
-  ]
+  const supabase = useMemo(() => getSupabaseClient(), [])
+  const [cursos, setCursos] = useState<Curso[]>(cursosFallback)
+  const [isLoading, setIsLoading] = useState(true)
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    const cargarCursos = async () => {
+      if (!supabase) {
+        setStatusMessage('Supabase no está configurado. Mostrando cursos base locales.')
+        setIsLoading(false)
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('courses')
+        .select('id, slug, title, description, duration_hours, category, published')
+        .eq('published', true)
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        setStatusMessage(`No se pudieron cargar cursos desde Supabase: ${error.message}`)
+        setIsLoading(false)
+        return
+      }
+
+      if (data && data.length > 0) {
+        setCursos(data)
+        setStatusMessage('Cursos cargados desde Supabase.')
+      } else {
+        setStatusMessage('No hay cursos publicados todavía. Mostrando cursos base locales.')
+      }
+
+      setIsLoading(false)
+    }
+
+    cargarCursos()
+  }, [supabase])
 
   return (
     <section className="py-16 px-4 bg-nexiom-dark min-h-screen">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-4xl font-bold mb-4 text-nexiom-bronze-light">Academia Virtual Nexiom</h1>
-        <p className="text-gray-400 mb-12">Cursos didácticos, prácticos y medibles diseñados para transformar tu empresa</p>
+        <p className="text-gray-400 mb-6">Cursos didácticos, prácticos y medibles diseñados para transformar tu empresa.</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {cursos.map((curso) => (
-            <div key={curso.id} className="bg-nexiom-blue border border-nexiom-bronze rounded-lg p-6 hover:shadow-lg transition">
-              <h3 className="text-xl font-bold mb-2 text-nexiom-bronze-light">{curso.titulo}</h3>
-              <p className="text-gray-400 text-sm mb-4">{curso.descripcion}</p>
-              <div className="space-y-2 mb-4 text-sm">
-                <p><span className="text-nexiom-bronze">Duración:</span> {curso.horas} horas</p>
-                <p><span className="text-nexiom-bronze">Nivel:</span> {curso.nivel}</p>
-                <p><span className="text-nexiom-bronze">Instructor:</span> {curso.instructor}</p>
+        {statusMessage && (
+          <div className="mb-8 rounded-lg border border-nexiom-bronze bg-nexiom-blue p-4 text-sm text-white">
+            {statusMessage}
+          </div>
+        )}
+
+        {isLoading ? (
+          <div className="rounded-lg border border-nexiom-bronze bg-nexiom-blue p-6 text-white">Cargando cursos...</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {cursos.map((curso) => (
+              <div key={curso.id} className="bg-nexiom-blue border border-nexiom-bronze rounded-lg p-6 hover:shadow-lg transition">
+                <h3 className="text-xl font-bold mb-2 text-nexiom-bronze-light">{curso.title}</h3>
+                <p className="text-gray-400 text-sm mb-4">{curso.description}</p>
+                <div className="space-y-2 mb-4 text-sm">
+                  <p><span className="text-nexiom-bronze">Duración:</span> {curso.duration_hours} horas</p>
+                  <p><span className="text-nexiom-bronze">Categoría:</span> {curso.category}</p>
+                  <p><span className="text-nexiom-bronze">Modalidad:</span> Academia Virtual Nexiom</p>
+                </div>
+                <Link
+                  href={`/academia/curso/${curso.slug}`}
+                  className="block w-full bg-nexiom-bronze-light text-white text-center py-2 rounded font-bold hover:bg-nexiom-bronze transition"
+                >
+                  Acceder al Curso
+                </Link>
               </div>
-              <Link
-                href={`/academia/curso/${curso.id}`}
-                className="block w-full bg-nexiom-bronze-light text-white text-center py-2 rounded font-bold hover:bg-nexiom-bronze transition"
-              >
-                Acceder al Curso
-              </Link>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   )
