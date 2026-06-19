@@ -59,7 +59,7 @@
           has_email: Boolean(document.getElementById('email')?.value),
           message_length_bucket: getMessageLengthBucket(message.length)
         });
-      });
+      }, { capture: true });
     }
 
     const assistantButton = document.querySelector('.ai button');
