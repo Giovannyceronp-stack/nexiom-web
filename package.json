@@ -1,0 +1,27 @@
+{
+  "name": "primary",
+  "version": "1.0.0",
+  "description": "Sitio público de Nexiom Intelligence Group con Academia integrada y curso demo **Excel Básico Administrativo**.",
+  "main": "index.js",
+  "scripts": {
+    "build:speed-insights": "esbuild assets/speed-insights.js --bundle --format=iife --outfile=assets/speed-insights.bundle.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Giovannyceronp-stack/nexiom-web.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Giovannyceronp-stack/nexiom-web/issues"
+  },
+  "homepage": "https://github.com/Giovannyceronp-stack/nexiom-web#readme",
+  "dependencies": {
+    "@vercel/speed-insights": "^2.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1"
+  }
+}
